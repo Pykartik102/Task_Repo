@@ -1,4 +1,4 @@
-import mysql.connector
+import sqlite3
 
 class Employee:
     def __init__(self, name, emp_id, title, department):
@@ -31,6 +31,42 @@ class Department:
                 employee.display_details()
         else:
             print(f"No employees in department {self.name}.")
+    def list_employees(self, company):
+        """
+        List employees in the department by querying the database.
+
+        Args:
+            company (Company): An instance of the Company class,
+                               providing access to the database connection.
+        """
+        if self.employees:  # Check in-memory list for existing employees (optional)
+            print(f"Employees in department {self.name}:")
+            for employee in self.employees:
+                employee.display_details()
+
+        # Query database for employees in this department
+        try:
+            conn = company.get_connection()  # Access connection from Company
+            cursor = conn.cursor()
+
+            cursor.execute("SELECT * FROM employees WHERE department = ?", (self.name,))
+            rows = cursor.fetchall()
+
+            if rows:
+                print(f"Employees in department {self.name} (from database):")
+                for row in rows:
+                    name, emp_id, title, department = row  # Extract data from row
+                    employee = Employee(name, emp_id, title, department)
+                    employee.display_details()
+            else:
+                print(f"No employees found in department {self.name} (from database).")
+
+        except sqlite3.Error as err:
+            print(f"Error retrieving employees: {err}")
+
+        finally:
+            # Connection handling is assumed to be managed by the Company class
+            pass  # No need to close connection here if managed elsewhere
 
 class Company:
     def __init__(self):
@@ -46,7 +82,18 @@ class Company:
             print("Department removed successfully.")
         else:
             print("Department not found.")
+    
+    #connection
+    def get_connection(self):
+        """
+        Returns a connection to the SQLite database.
 
+        This assumes the connection is established elsewhere (e.g., in main).
+        """
+        # Modify this based on your connection establishment logic
+        return conn  # Replace with your connection object
+
+    
     def display_departments(self):
         if self.departments:
             print("Departments:")
@@ -55,9 +102,43 @@ class Company:
         else:
             print("No departments.")
 
-    # Your code...
-
+ # Your code...mysql
 def save_to_database(self):
+        try:
+            # Connect to SQLite database
+            conn = sqlite3.connect("emp_db.db")
+            cursor = conn.cursor()
+
+            # Create tables if not exist
+            cursor.execute("""CREATE TABLE IF NOT EXISTS departments (name TEXT)""")
+            cursor.execute("""CREATE TABLE IF NOT EXISTS employees (name TEXT, emp_id INTEGER, title TEXT, department TEXT)""")
+
+            # Clear existing data (optional)
+            cursor.execute("DELETE FROM departments")
+            cursor.execute("DELETE FROM employees")
+
+            # Insert department data
+            for department_name in self.departments:
+                cursor.execute("INSERT INTO departments (name) VALUES (?)", (department_name,))
+
+            # Insert employee data
+            for department in self.departments.values():
+                for employee in department.employees:
+                    cursor.execute("INSERT INTO employees (name, emp_id, title, department) VALUES (?, ?, ?, ?)",
+                                   (employee.name, employee.emp_id, employee.title, employee.department))
+
+            # Commit changes
+            conn.commit()
+            print("Data saved to database successfully.")
+
+        except sqlite3.Error as err:
+            print("Error:", err)
+
+        finally:
+            # Close connection if open
+            if conn:
+                conn.close()
+'''def save_to_database(self):
     try:
         db = mysql.connector.connect(
             host="localhost",
@@ -90,6 +171,7 @@ def save_to_database(self):
         if db.is_connected():
             cursor.close()
             db.close()
+'''
 def menu():
     print("Menu:")
     print("1. Add Employee")
